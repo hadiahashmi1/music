@@ -106,7 +106,7 @@ class App:
         self.fullscreen = C.START_FULLSCREEN
 
         # static lock screen text
-        title = C.LOCK_TITLE if not C.FRIEND_NAME else f"{C.FRIEND_NAME} — {C.LOCK_TITLE}"
+        title = C.LOCK_TITLE
         self.ui_title = T.render_tracked(T.font("display", 26), title.upper(), C.SILVER, 6)
         self.ui_sub = T.font("italic", 30).render(C.LOCK_SUBTITLE, True, C.ICE_BLUE)
         self.ui_place = T.font("italic", 26).render("enter the password", True, C.SILVER_DIM)
@@ -204,9 +204,10 @@ class App:
         caps = list(sc["captions"])
         if sc["dur"] is None:
             caps += S.finale_captions()
-        self.captions = [T.Caption(lines, st, dur,
-                                   y=0.80 if any(sty == "hero" for _, sty in lines) else 0.83)
-                         for lines, st, dur in caps]
+        self.captions = []
+        for lines, st, dur, *pos in caps:
+            y = pos[0] if pos else (0.80 if any(sty == "hero" for _, sty in lines) else 0.83)
+            self.captions.append(T.Caption(lines, st, dur, y=y, gap=4 if len(lines) > 2 else 10))
 
     def begin_story(self):
         M = self.lock.model(0.32, 0.22, 0.0)

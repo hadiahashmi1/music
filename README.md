@@ -35,6 +35,15 @@ and its title shows briefly in the corner after the lock opens.
 Until you add it, the program plays the piano track already in this folder. If there is no
 audio file at all, it plays a soft pad it generates itself. Music always plays.
 
+## Make a video for iPhone
+
+```
+python tools/render_video.py
+```
+This renders the whole thing, with the song, to `For_Gwen.mp4` (H.264 + AAC, which plays on any
+iPhone). The password is typed in automatically as dots, the lock opens, and the video fades
+out after the final frame. It needs [ffmpeg](https://ffmpeg.org/download.html) installed.
+
 ## Controls
 
 | Key | What it does |
