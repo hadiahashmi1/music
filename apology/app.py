@@ -40,6 +40,7 @@ def _radial(w, h, cx, cy, rx, ry, power=2.0):
 class Backdrop:
     def __init__(self, w, h):
         self.w, self.h = w, h
+        k = h / 720.0
         g = np.linspace(0, 1, h, dtype=np.float32)[:, None, None]
         top = np.array(C.NAVY_DEEP, np.float32)
         bot = np.array(C.NAVY, np.float32)
@@ -59,6 +60,7 @@ class Backdrop:
         # slow drifting light clouds
         self.clouds = []
         for col, r, lvl in ((C.ROYAL_BLUE, 420, 0.16), ((30, 60, 150), 520, 0.14), (C.GOLD_DEEP, 300, 0.07)):
+            r = int(r * k)
             a = _radial(2 * r, 2 * r, r, r, r, r, 2.4)
             rgb = (a[..., None] * np.array(col) * lvl).astype(np.uint8)
             self.clouds.append(pygame.surfarray.make_surface(rgb.transpose(1, 0, 2)))
@@ -84,6 +86,8 @@ class App:
     def __init__(self, screen):
         self.screen = screen
         self.W, self.H = screen.get_size()
+        self.k = self.H / 720.0          # UI scale, so 1080p renders sharper, not smaller
+        T.SCALE = self.k
         self.cam = Camera(self.W, self.H, fov_deg=40, distance=7.0)
         self.backdrop = Backdrop(self.W, self.H)
         self.bank = P.SpriteBank()
@@ -292,62 +296,69 @@ class App:
 
         offset = LOCK_OFFSET + np.array([0.0, bob, 0.0])
         self.lock.draw(self.screen, self.cam, yaw, pitch, roll, scale, offset,
-                       lift=lift, swivel=swivel, glow=glow, alpha=alpha)
+                       lift=lift, swivel=swivel, glow=glow, alpha=alpha,
+                       region=int(820 * self.k))
 
         if ui_alpha <= 0.01:
             return
         a = int(255 * ui_alpha)
         scr = self.screen
-        for surf, y in ((self.ui_title, 62), (self.ui_sub, 104)):
+        k = self.k
+
+        def s(v):
+            return int(round(v * k))
+
+        for surf, y in ((self.ui_title, s(62)), (self.ui_sub, s(104))):
             surf.set_alpha(a)
             scr.blit(surf, ((W - surf.get_width()) // 2, y))
 
         # ornament
         cx = W // 2
         gold = tuple(int(c * ui_alpha) for c in C.GOLD)
-        pygame.draw.aaline(scr, gold, (cx - 120, 150), (cx - 14, 150))
-        pygame.draw.aaline(scr, gold, (cx + 14, 150), (cx + 120, 150))
-        pygame.draw.polygon(scr, gold, [(cx, 145), (cx + 5, 150), (cx, 155), (cx - 5, 150)])
+        oy = s(150)
+        pygame.draw.aaline(scr, gold, (cx - s(120), oy), (cx - s(14), oy))
+        pygame.draw.aaline(scr, gold, (cx + s(14), oy), (cx + s(120), oy))
+        pygame.draw.polygon(scr, gold, [(cx, oy - s(5)), (cx + s(5), oy), (cx, oy + s(5)), (cx - s(5), oy)])
 
         # input field
-        dx = int(14 * math.exp(-(t - self.shake_t) * 5.0) * math.sin((t - self.shake_t) * 48.0))
-        bw, bh = 430, 58
+        dx = int(s(14) * math.exp(-(t - self.shake_t) * 5.0) * math.sin((t - self.shake_t) * 48.0))
+        bw, bh = s(430), s(58)
         box = pygame.Rect(cx - bw // 2 + dx, int(H * 0.79) - bh // 2, bw, bh)
         panel = pygame.Surface(box.size, pygame.SRCALPHA)
-        pygame.draw.rect(panel, (8, 18, 44, int(190 * ui_alpha)), panel.get_rect(), border_radius=29)
+        pygame.draw.rect(panel, (8, 18, 44, int(190 * ui_alpha)), panel.get_rect(), border_radius=bh // 2)
         scr.blit(panel, box.topleft)
         pulse = 0.65 + 0.35 * math.sin(t * 2.2)
         border = tuple(int(c * ui_alpha * (0.75 + 0.25 * pulse)) for c in C.GOLD)
-        pygame.draw.rect(scr, border, box, width=2, border_radius=29)
-        inner = box.inflate(-8, -8)
-        pygame.draw.rect(scr, tuple(int(c * ui_alpha * 0.35) for c in C.SILVER), inner, width=1, border_radius=25)
+        pygame.draw.rect(scr, border, box, width=max(2, s(2)), border_radius=bh // 2)
+        inner = box.inflate(-s(8), -s(8))
+        pygame.draw.rect(scr, tuple(int(c * ui_alpha * 0.35) for c in C.SILVER), inner, width=1, border_radius=inner.height // 2)
 
         if self.typed:
             n = len(self.typed)
-            gap = 22
+            gap = s(22)
             x0 = box.centerx - (n - 1) * gap / 2
             for i in range(n):
                 pygame.draw.circle(scr, tuple(int(c * ui_alpha) for c in C.GOLD_BRIGHT),
-                                   (int(x0 + i * gap), box.centery), 5)
-            caret_x = int(x0 + (n - 1) * gap + 16)
+                                   (int(x0 + i * gap), box.centery), s(5))
+            caret_x = int(x0 + (n - 1) * gap + s(16))
         else:
             self.ui_place.set_alpha(int(a * 0.8))
             scr.blit(self.ui_place, (box.centerx - self.ui_place.get_width() // 2,
-                                     box.centery - self.ui_place.get_height() // 2 - 2))
-            caret_x = box.centerx - self.ui_place.get_width() // 2 - 12
+                                     box.centery - self.ui_place.get_height() // 2 - s(2)))
+            caret_x = box.centerx - self.ui_place.get_width() // 2 - s(12)
         if self.state == LOCK and ((t - self.enter_t) % 1.1) < 0.6:
-            pygame.draw.line(scr, C.GOLD_BRIGHT, (caret_x, box.centery - 14), (caret_x, box.centery + 14), 2)
+            pygame.draw.line(scr, C.GOLD_BRIGHT, (caret_x, box.centery - s(14)), (caret_x, box.centery + s(14)), max(2, s(2)))
 
-        y = box.bottom + 20
+        y = box.bottom + s(20)
         self.ui_enter.set_alpha(int(a * 0.85))
         scr.blit(self.ui_enter, (cx - self.ui_enter.get_width() // 2, y))
         err_a = clamp01(1 - (t - self.error_t - 2.2) / 0.8) if t - self.error_t < 3.0 else 0
         if err_a > 0:
             self.ui_error.set_alpha(int(255 * err_a * ui_alpha))
-            scr.blit(self.ui_error, (cx - self.ui_error.get_width() // 2, box.top - 44))
+            scr.blit(self.ui_error, (cx - self.ui_error.get_width() // 2, box.top - s(44)))
         if self.ui_hint and self.attempts >= C.SHOW_HINT_AFTER_ATTEMPTS:
             self.ui_hint.set_alpha(int(220 * ui_alpha))
-            scr.blit(self.ui_hint, (cx - self.ui_hint.get_width() // 2, y + 26))
+            scr.blit(self.ui_hint, (cx - self.ui_hint.get_width() // 2, y + s(26)))
 
     def draw_story(self):
         view = self.view_matrix()
@@ -361,9 +372,11 @@ class App:
             a = smoothstep(3.0, 5.0, st) * (1 - smoothstep(12.0, 15.0, st))
             if a > 0:
                 self.track_label.set_alpha(int(200 * a))
-                y = self.H - int(self.H * 0.075) - self.track_label.get_height() - 14
-                pygame.draw.line(self.screen, C.GOLD_DEEP, (36, y + 8), (60, y + 8), 1)
-                self.screen.blit(self.track_label, (70, y))
+                k = self.k
+                y = self.H - int(self.H * 0.075) - self.track_label.get_height() - int(14 * k)
+                ly = y + self.track_label.get_height() // 2
+                pygame.draw.line(self.screen, C.GOLD_DEEP, (int(36 * k), ly), (int(60 * k), ly), 1)
+                self.screen.blit(self.track_label, (int(70 * k), y))
 
 
 # ================================================================ main loop
