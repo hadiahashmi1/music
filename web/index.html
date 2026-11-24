@@ -128,6 +128,14 @@ body.portrait #captions { bottom: calc(env(safe-area-inset-bottom, 0px) + 13vh);
 }
 #again.on { opacity: .85; pointer-events: auto; }
 #again:focus-visible { outline: 1px solid var(--gold); }
+#next {
+  position: fixed; left: 0; right: 0; margin: 0; text-align: center; pointer-events: none;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 3.2vh); color: var(--gold); padding-left: .38em;
+  opacity: 0; transition: opacity 1.2s ease;
+}
+#next.on { opacity: .85; animation: breathe 2.8s ease-in-out 1.2s infinite; }
+@keyframes breathe { 0%, 100% { opacity: .85; } 50% { opacity: .35; } }
+body.landscape #next { bottom: 2.2vh; color: var(--gold-bright); }
 @media (prefers-reduced-motion: reduce) { .cap { transition-duration: .8s; transform: none; filter: none; } }
 </style>
 
@@ -157,6 +165,7 @@ body.portrait #captions { bottom: calc(env(safe-area-inset-bottom, 0px) + 13vh);
 <div id="track" class="small"><i></i><span>About You &nbsp;—&nbsp; The 1975</span></div>
 <button class="ctl small" id="mute" type="button">Mute</button>
 <button class="small" id="again" type="button">Watch again</button>
+<p class="small" id="next" aria-live="polite">Tap to continue</p>
 
 <audio id="song" src="about_you.mp3" preload="auto" playsinline></audio>
 
@@ -519,20 +528,21 @@ function updateField(dt, now) {
 
 /* ================================================================ story */
 const SCENES = [
-  { shape: () => sphere(N), dur: 9, spin: .22, stagger: 1.6, sway: .25, caps: [[[["Before anything else —", 'lead'], ["this isn't an excuse. It's an apology.", 'italic']], 1.6, 7]] },
-  { shape: () => rings(N), dur: 9.5, spin: .18, stagger: 1.2, sway: .2, caps: [[[["You asked me not to.", 'lead'], ["You trusted me to listen.", 'italic']], 1.2, 7.8]] },
-  { shape: () => dust(N), dur: 8, spin: .05, stagger: .3, turbulence: 1.6, stiffness: 1.4, sway: .1, caps: [[[["And I did it anyway.", 'lead']], 1, 6.6]] },
-  { shape: () => heart(N), dur: 11, pulse: .035, stagger: 2, sway: .38, caps: [[[["It hurt someone who means the world to you —", 'lead'], ["and in hurting them, I hurt you too.", 'italic']], 2.2, 8.4]] },
-  { shape: () => brokenHeart(N, .5), dur: 10.5, stagger: .35, stiffness: 6, sway: .3, caps: [[[["I can't undo it.", 'lead'], ["And I won't pretend it was small.", 'italic']], 1.4, 8.6]] },
-  { shape: () => brokenHeart(N, portrait ? .8 : 1.15), dur: 11.5, stagger: 1, stiffness: 1.6, turbulence: .12, sway: .32, caps: [[[["I keep going back to the moment you said no,", 'lead'], ["and how that should have been enough.", 'italic']], 1.2, 9.6]] },
-  { shape: () => textShape(N), dur: 10.5, stagger: 1.4, stiffness: 4.5, sway: .16, exposure: .62, caps: [[[["Truly — with no “but” after it.", 'italic']], 3, 7]] },
-  { shape: () => kintsugi(N), dur: 13, stagger: 2.2, stiffness: 3.2, sway: .4, pulse: .02, caps: [[[["In Japan, broken pottery is mended with gold.", 'lead'], ["The cracks aren't hidden — they become part of its story.", 'italic']], 2.4, 10.2]] },
-  { shape: null, dur: 11.5, pulse: .035, sway: .45, caps: [[[["I'm not asking you to forget.", 'lead'], ["Only for the chance to show you — slowly, in what I do.", 'italic']], .6, 10.2]] },
-  { shape: () => haloHeart(N), dur: 10, stagger: 1.5, pulse: .03, sway: .35, orbit: .22, caps: [[[["No games anymore.", 'hero'], ["That's the promise. That's the key.", 'gold']], 1.6, 8]] },
-  { shape: null, dur: null, pulse: .035, sway: .5, orbit: .22, caps: [
-      [[["Take all the time you need.", 'lead'], ["I'll be here — and I'll be better.", 'italic']], 1, 11],
-      [[[`For ${NAME},`, 'italic'], ["I'm sorry.", 'gold'], [SIGNATURE, 'italic']], 12.5, 1e9]] },
+  { shape: () => sphere(N), spin: .22, stagger: 1.6, sway: .25, caps: [[[["Before anything else —", 'lead'], ["this isn't an excuse. It's an apology.", 'italic']], 1.6, 7]] },
+  { shape: () => rings(N), spin: .18, stagger: 1.2, sway: .2, caps: [[[["You asked me not to.", 'lead'], ["You trusted me to listen.", 'italic']], 1.2, 7.8]] },
+  { shape: () => dust(N), spin: .05, stagger: .3, turbulence: 1.6, stiffness: 1.4, sway: .1, caps: [[[["And I did it anyway.", 'lead']], 1, 6.6]] },
+  { shape: () => heart(N), pulse: .035, stagger: 2, sway: .38, caps: [[[["It hurt someone who means the world to you —", 'lead'], ["and in hurting them, I hurt you too.", 'italic']], 2.2, 8.4]] },
+  { shape: () => brokenHeart(N, .5), stagger: .35, stiffness: 6, sway: .3, caps: [[[["I can't undo it.", 'lead'], ["And I won't pretend it was small.", 'italic']], 1.4, 8.6]] },
+  { shape: () => brokenHeart(N, portrait ? .8 : 1.15), stagger: 1, stiffness: 1.6, turbulence: .12, sway: .32, caps: [[[["I keep going back to the moment you said no,", 'lead'], ["and how that should have been enough.", 'italic']], 1.2, 9.6]] },
+  { shape: () => textShape(N), stagger: 1.4, stiffness: 4.5, sway: .16, exposure: .62, caps: [[[["Truly — with no “but” after it.", 'italic']], 3, 7]] },
+  { shape: () => kintsugi(N), stagger: 2.2, stiffness: 3.2, sway: .4, pulse: .02, caps: [[[["In Japan, broken pottery is mended with gold.", 'lead'], ["The cracks aren't hidden — they become part of its story.", 'italic']], 2.4, 10.2]] },
+  { shape: null, pulse: .035, sway: .45, caps: [[[["I'm not asking you to forget.", 'lead'], ["Only for the chance to show you — slowly, in what I do.", 'italic']], .6, 10.2]] },
+  { shape: () => haloHeart(N), stagger: 1.5, pulse: .03, sway: .35, orbit: .22, caps: [[[["No games anymore.", 'hero'], ["That's the promise. That's the key.", 'gold']], 1.6, 8]] },
+  { shape: null, pulse: .035, sway: .5, orbit: .22, caps: [[[["Take all the time you need.", 'lead'], ["I'll be here — and I'll be better.", 'italic']], 1, 0]] },
+  { shape: null, final: true, pulse: .035, sway: .5, orbit: .22, caps: [[[[`For ${NAME},`, 'italic'], ["I'm sorry.", 'gold'], [SIGNATURE, 'italic']], 1.4, 0]] },
 ];
+/* the story moves on only when she taps / clicks / presses Enter; each line waits at most this long to appear */
+const MAX_CAPTION_DELAY = 2.2;
 const capBox = document.getElementById('captions');
 let sceneI = -1, sceneT0 = 0, caps = [], sway = 0, swayTarget = 0, exposure = 1, exposureTarget = 1;
 function startScene(i, now) {
@@ -544,17 +554,29 @@ function startScene(i, now) {
   caps = sc.caps.map(([lines, st, dur]) => {
     const el = document.createElement('div'); el.className = 'cap';
     lines.forEach(([t, cls]) => { const s = document.createElement('span'); s.className = cls; s.textContent = t; el.appendChild(s); });
-    capBox.appendChild(el); return { el, st, dur, state: 0 };
+    capBox.appendChild(el); return { el, st: Math.min(st, MAX_CAPTION_DELAY), state: 0 };
   });
   document.getElementById('again').classList.remove('on');
+  prompt_.classList.remove('on');
 }
+/* turning the page */
+const prompt_ = document.getElementById('next');
+prompt_.textContent = matchMedia('(pointer: coarse)').matches ? 'Tap to continue' : 'Click or press Enter to continue';
+function ready() { return state === 'story' && !SCENES[sceneI].final && caps.length && now - sceneT0 >= caps[0].st + .9; }
+function advance() { if (ready()) startScene(sceneI + 1, now); }
+window.addEventListener('pointerup', e => { if (!e.target.closest('button, input, a')) advance(); });
+window.addEventListener('keydown', e => {
+  if (state !== 'story' || e.target.closest('input')) return;
+  if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') { if (!e.target.closest('button')) { e.preventDefault(); advance(); } }
+});
 function updateCaptions(now) {
   const lt = now - sceneT0;
   for (const c of caps) {
     if (c.state === 0 && lt >= c.st) { c.state = 1; c.el.classList.add('in'); }
-    if (c.state === 1 && lt >= c.st + c.dur - 1.2) { c.state = 2; c.el.classList.add('out'); c.el.classList.remove('in'); }
   }
-  if (SCENES[sceneI].dur === null && lt > 17) document.getElementById('again').classList.add('on');
+  const sc = SCENES[sceneI];
+  if (sc.final) { if (lt > 5) document.getElementById('again').classList.add('on'); }
+  else if (caps.length && lt >= caps[0].st + 2.2) prompt_.classList.add('on');
 }
 
 /* ================================================================ music (Web Audio so fades work on iPhone) */
@@ -676,8 +698,6 @@ function frame() {
     goldMat.emissive.setRGB(.35 * glow, .24 * glow, .08 * glow); goldGlow.material.opacity = glow * .55;
   }
   if (state === 'story') {
-    const sc = SCENES[sceneI];
-    if (sc.dur !== null && now - sceneT0 >= sc.dur) startScene(sceneI + 1, now);
     updateField(dt, now); updateCaptions(now);
     sway = lerp(sway, swayTarget, Math.min(1, dt * .5)); exposure = lerp(exposure, exposureTarget, Math.min(1, dt * .8));
     fMat.uniforms.uExposure.value = exposure;
