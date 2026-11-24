@@ -206,7 +206,7 @@ def text_shape(n, text, font, width=6.2, palette=(GOLD, GOLD_HI, SILVER), rng=_R
 # ============================================================== sprites
 class SpriteBank:
     """Pre-rendered additive glow dots: colour x size x brightness."""
-    SIZES = np.array([1.2, 1.6, 2.0, 2.5, 3.0, 3.6, 4.3, 5.1, 6.0, 7.2, 8.6, 10.5])
+    SIZES = np.array([1.2, 1.6, 2.0, 2.5, 3.0, 3.6, 4.3, 5.1, 6.0, 7.2, 8.6, 10.5, 12.6, 15.2])
     LEVELS = 10
 
     def __init__(self):

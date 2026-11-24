@@ -36,7 +36,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("out", nargs="?", default=str(ROOT / "For_Gwen.mp4"))
     ap.add_argument("--fps", type=int, default=30)
+    ap.add_argument("--height", type=int, default=1080, help="1080 (default) or 720")
     args = ap.parse_args()
+    C.HEIGHT = args.height
+    C.WIDTH = args.height * 16 // 9
 
     track, _ = find_track()
     if track is None:
@@ -60,8 +63,8 @@ def main():
     ff = subprocess.Popen(
         ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
          "-s", f"{C.WIDTH}x{C.HEIGHT}", "-r", str(fps), "-i", "-",
-         "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-pix_fmt", "yuv420p",
-         "-profile:v", "high", "-level", "4.1", str(silent)],
+         "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p",
+         "-profile:v", "high", "-level", "4.2", str(silent)],
         stdin=subprocess.PIPE)
 
     frame = 0

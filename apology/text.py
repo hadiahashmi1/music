@@ -15,9 +15,11 @@ _FALLBACK = {
     "italic": "garamond,baskerville,georgia,palatinolinotype,timesnewroman,dejavuserif",
 }
 _cache = {}
+SCALE = 1.0   # UI scale: 1.0 at 720p, 1.5 at 1080p (set by the app)
 
 
 def font(kind, size):
+    size = max(1, int(round(size * SCALE)))
     key = (kind, size)
     if key not in _cache:
         path = C.FONTS / _FONT_FILES[kind]
@@ -40,6 +42,7 @@ def font(kind, size):
 
 def render_tracked(fnt, text, color, tracking=0):
     """Render text with extra letter spacing (tracking, in pixels)."""
+    tracking = int(round(tracking * SCALE))
     if not tracking:
         return fnt.render(text, True, color)
     glyphs = [fnt.render(ch, True, color) for ch in text]
@@ -80,7 +83,8 @@ class Caption:
         for text, style in lines:
             kind, size, col, track, glow = STYLES[style]
             rendered.append((render_tracked(font(kind, size), text, col, track), glow))
-        pad = 40
+        pad = int(40 * SCALE)
+        gap = int(gap * SCALE)
         w = max(s.get_width() for s, _ in rendered) + pad * 2
         h = sum(s.get_height() for s, _ in rendered) + gap * (len(rendered) - 1) + pad * 2
         self.sharp = pygame.Surface((w, h), pygame.SRCALPHA)
@@ -119,7 +123,7 @@ class Caption:
         if a <= 0.004:
             return
         focus = clamp01(lt / (self.fade_in * 1.1))
-        rise = (1 - ease_in_out(lt / (self.fade_in * 1.6))) * 14
+        rise = (1 - ease_in_out(lt / (self.fade_in * 1.6))) * 14 * SCALE
         sw, sh = screen.get_size()
         x = (sw - self.sharp.get_width()) // 2
         y = int(sh * self.y - self.sharp.get_height() / 2 + rise)

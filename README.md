@@ -40,9 +40,9 @@ audio file at all, it plays a soft pad it generates itself. Music always plays.
 ```
 python tools/render_video.py
 ```
-This renders the whole thing, with the song, to `For_Gwen.mp4` (H.264 + AAC, which plays on any
+This renders the whole thing in 1080p, with the song, to `For_Gwen.mp4` (H.264 + AAC, which plays on any
 iPhone). The password is typed in automatically as dots, the lock opens, and the video fades
-out after the final frame. It needs [ffmpeg](https://ffmpeg.org/download.html) installed.
+out after the final frame. Add `--height 720` for a smaller file. It needs [ffmpeg](https://ffmpeg.org/download.html) installed.
 
 ## Controls
 
