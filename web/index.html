@@ -128,6 +128,35 @@ body.portrait #captions { bottom: calc(env(safe-area-inset-bottom, 0px) + 13vh);
 }
 #again.on { opacity: .85; pointer-events: auto; }
 #again:focus-visible { outline: 1px solid var(--gold); }
+/* ---------- thumbprint step */
+#thumb {
+  position: fixed; left: 0; right: 0; top: 66%; display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  opacity: 0; pointer-events: none; transition: opacity .9s ease; text-align: center;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+body.portrait #thumb { top: 58%; }
+body.landscape #thumb { top: 66%; gap: 8px; }
+#thumb.on { opacity: 1; pointer-events: auto; }
+#thumb.done { opacity: 0; pointer-events: none; }
+.thumb-title { text-wrap: balance; max-width: 22em; font-style: italic; font-size: clamp(21px, 2.4vw, 30px); color: var(--ink); margin: 0; }
+#pad {
+  position: relative; width: 132px; height: 132px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
+  background: radial-gradient(circle at 50% 45%, rgba(26,48,100,.9), rgba(6,14,36,.92) 70%);
+  box-shadow: 0 0 0 1px rgba(205,214,228,.22), 0 0 40px rgba(52,104,214,.35);
+  touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+#pad:focus-visible { outline: 2px solid var(--ice); outline-offset: 6px; }
+#pad svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+#pad .ridges path { fill: none; stroke-linecap: round; stroke-width: 2.1; }
+#pad .dim path { stroke: rgba(232,187,92,.38); }
+#pad .lit path { stroke: var(--gold-bright); filter: drop-shadow(0 0 3px rgba(255,222,150,.9)); }
+#pad .ring-bg { fill: none; stroke: rgba(205,214,228,.18); stroke-width: 3; }
+#pad .ring { fill: none; stroke: var(--gold); stroke-width: 3.5; stroke-linecap: round; filter: drop-shadow(0 0 4px rgba(232,187,92,.8)); }
+#pad .scan { fill: url(#scanGrad); }
+#pad.idle { animation: padPulse 2.4s ease-in-out infinite; }
+@keyframes padPulse { 0%, 100% { box-shadow: 0 0 0 1px rgba(205,214,228,.22), 0 0 34px rgba(52,104,214,.3); } 50% { box-shadow: 0 0 0 1px rgba(232,187,92,.55), 0 0 54px rgba(232,187,92,.35); } }
+.thumb-hint { min-height: 1.3em; font-style: italic; font-size: 19px; color: var(--ice); margin: 0; }
 #next {
   position: fixed; left: 0; right: 0; margin: 0; text-align: center; pointer-events: none;
   bottom: calc(env(safe-area-inset-bottom, 0px) + 3.2vh); color: var(--gold); padding-left: .38em;
@@ -160,6 +189,27 @@ body.landscape #next { bottom: 2.2vh; color: var(--gold-bright); }
   <p class="hint" id="hint">hint: the promise, in one word, no spaces</p>
   <p class="small" id="sound">Sound on, please</p>
 </form>
+
+<section id="thumb" aria-label="Thumbprint">
+  <p class="thumb-title">Now press and hold your thumb here to unlock it.</p>
+  <button id="pad" class="idle" type="button" aria-label="Press and hold to unlock">
+    <svg viewBox="-66 -66 132 132" aria-hidden="true">
+      <defs>
+        <linearGradient id="scanGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#ffde96" stop-opacity="0"/><stop offset=".85" stop-color="#ffde96" stop-opacity=".55"/><stop offset="1" stop-color="#fff6e4" stop-opacity=".9"/>
+        </linearGradient>
+        <clipPath id="fill"><rect id="fillRect" x="-66" y="66" width="132" height="132"/></clipPath>
+      </defs>
+      <circle class="ring-bg" r="60"/>
+      <circle class="ring" id="ring" r="60" transform="rotate(-90)" stroke-dasharray="377" stroke-dashoffset="377"/>
+      <g class="ridges dim" id="ridgesDim"></g>
+      <g class="ridges lit" id="ridgesLit" clip-path="url(#fill)"></g>
+      <rect class="scan" id="scanBar" x="-44" y="66" width="88" height="14" rx="7" opacity="0"/>
+    </svg>
+  </button>
+  <p class="small">Hold until the ring is full</p>
+  <p class="thumb-hint" id="thumbHint" aria-live="polite"></p>
+</section>
 
 <div id="captions" aria-live="polite"></div>
 <div id="track" class="small"><i></i><span>About You &nbsp;—&nbsp; The 1975</span></div>
@@ -619,8 +669,10 @@ form.addEventListener('submit', async e => {
   const h = await sha256(guess);
   const ok = h ? h === PW_SHA256 : guess === ['no', 'games', 'anymore'].join('');
   if (ok) {
-    state = 'unlocking'; unlockT = now; pw.blur();
-    document.getElementById('lock').classList.add('gone'); form.style.transition = 'opacity .8s'; form.style.opacity = 0; form.style.pointerEvents = 'none';
+    state = 'thumb'; pw.blur();
+    form.style.transition = 'opacity .8s'; form.style.opacity = 0; form.style.pointerEvents = 'none';
+    document.querySelector('#lock .sub').textContent = 'The promise is right. One last thing.';
+    setTimeout(() => thumbEl.classList.add('on'), 700);
   } else {
     attempts++; pw.value = ''; msg.textContent = 'Not quite. Take your time.'; msg.style.opacity = 1;
     field_.classList.remove('shake'); void field_.offsetWidth; field_.classList.add('shake');
@@ -628,6 +680,51 @@ form.addEventListener('submit', async e => {
     if (attempts >= 2) document.getElementById('hint').classList.add('on');
   }
 });
+
+/* ================================================================ thumbprint */
+const thumbEl = document.getElementById('thumb'), pad = document.getElementById('pad'), thumbHint = document.getElementById('thumbHint');
+const ring = document.getElementById('ring'), fillRect = document.getElementById('fillRect'), scanBar = document.getElementById('scanBar');
+(function drawRidges() {
+  /* a stylised fingerprint: nested, slightly broken loops */
+  let d = '';
+  for (let k = 0; k < 12; k++) {
+    const rx = 6 + k * 3.7, ry = 8 + k * 4.4, cy = 6 - k * .9;
+    const gap = .55 + (k % 3) * .18, a0 = Math.PI / 2 + gap, a1 = Math.PI / 2 + TAU - gap;
+    const brk = k > 2 && k % 2 ? a0 + (a1 - a0) * (.3 + .1 * (k % 4)) : null;
+    const seg = (s, e) => { const p = []; for (let i = 0; i <= 28; i++) { const a = s + (e - s) * i / 28; p.push(`${(Math.cos(a) * rx).toFixed(2)},${(cy + Math.sin(a) * ry).toFixed(2)}`); } return 'M' + p.join('L'); };
+    d += brk ? seg(a0, brk - .12) + seg(brk + .12, a1) : seg(a0, a1);
+  }
+  for (const id of ['ridgesDim', 'ridgesLit']) {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path'); path.setAttribute('d', d);
+    document.getElementById(id).appendChild(path);
+  }
+})();
+let holding = false, thumbP = 0, lockYCur = null, lockSCur = null;
+const HOLD_SECONDS = 2.2;
+function press(e) { if (state !== 'thumb') return; if (e) e.preventDefault(); holding = true; thumbHint.textContent = ''; pad.classList.remove('idle');
+  startMusic(.35); try { navigator.vibrate && navigator.vibrate(15); } catch (_) {} }
+function release() { if (!holding) return; holding = false;
+  if (state === 'thumb' && thumbP < 1) { if (thumbP > .04) thumbHint.textContent = 'Hold a little longer.'; pad.classList.add('idle'); } }
+pad.addEventListener('pointerdown', e => { pad.setPointerCapture && pad.setPointerCapture(e.pointerId); press(e); });
+pad.addEventListener('pointerup', release); pad.addEventListener('pointercancel', release); pad.addEventListener('lostpointercapture', release);
+pad.addEventListener('contextmenu', e => e.preventDefault());
+pad.addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) press(e); });
+pad.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') release(); });
+let lastThumbT = performance.now();
+function updateThumb() {
+  const t = performance.now(), dt = Math.min(.1, (t - lastThumbT) / 1000); lastThumbT = t;   // real time, not frame-capped
+  thumbP = clamp01(thumbP + (holding ? dt / HOLD_SECONDS : -dt * 1.2));
+  const e = easeInOut(thumbP);
+  ring.setAttribute('stroke-dashoffset', (377 * (1 - thumbP)).toFixed(1));
+  const y = 66 - 132 * e; fillRect.setAttribute('y', y.toFixed(1));
+  scanBar.setAttribute('y', (y - 7).toFixed(1)); scanBar.setAttribute('opacity', holding && e < .96 ? .9 : 0);
+  goldGlow.material.opacity = thumbP * .35;
+  if (thumbP >= 1) {
+    holding = false; state = 'unlocking'; unlockT = now; thumbHint.textContent = '';
+    try { navigator.vibrate && navigator.vibrate([20, 40, 30]); } catch (_) {}
+    thumbEl.classList.add('done'); document.getElementById('lock').classList.add('gone');
+  }
+}
 
 function beginStory() {
   /* the lock becomes particles exactly where it stood */
@@ -680,7 +777,9 @@ function frame() {
   starGeo.attributes.position.needsUpdate = true;
   stars.rotation.y = .05 * Math.sin(now * .05); stars.rotation.x = .03 * Math.sin(now * .07);
 
-  if (state === 'lock' || state === 'unlocking') {
+  if (lockYCur === null) { lockYCur = portrait ? halfH * .14 : -.4; lockSCur = portrait ? .95 : .8; }
+  if (state === 'thumb') updateThumb(); else lastThumbT = performance.now();
+  if (state === 'lock' || state === 'thumb' || state === 'unlocking') {
     let yaw = .42 * Math.sin(now * .45) + .08, pitch = .22 + .04 * Math.sin(now * .31), bob = .05 * Math.sin(now * 1.1);
     let lift = 0, swivel = 0, glow = 0, sc = 1;
     if (state === 'unlocking') {
@@ -691,11 +790,14 @@ function frame() {
       glow = smooth(1.2, 2.3, u); sc = 1 + .06 * smooth(1.4, 2.3, u);
       if (u >= 2.35) beginStory();
     }
-    const lockY = portrait ? halfH * .14 : -.4;
-    lock.position.set(0, lockY + bob, 0); lock.rotation.set(pitch, yaw, 0, 'YXZ');
-    lock.scale.setScalar((portrait ? .95 : .8) * sc);
+    /* on wide screens the lock rises and shrinks a little to make room for the thumb pad */
+    const raised = !portrait && state !== 'lock';
+    lockYCur = lerp(lockYCur, portrait ? halfH * .14 : raised ? .02 : -.4, Math.min(1, dt * 3));
+    lockSCur = lerp(lockSCur, portrait ? .95 : raised ? .68 : .8, Math.min(1, dt * 3));
+    lock.position.set(0, lockYCur + bob, 0); lock.rotation.set(pitch, yaw, 0, 'YXZ');
+    lock.scale.setScalar(lockSCur * sc);
     shackle.position.y = lift; shackle.rotation.y = swivel;
-    goldMat.emissive.setRGB(.35 * glow, .24 * glow, .08 * glow); goldGlow.material.opacity = glow * .55;
+    goldMat.emissive.setRGB(.35 * glow, .24 * glow, .08 * glow); if (state === 'unlocking') goldGlow.material.opacity = Math.max(.35, glow * .55);
   }
   if (state === 'story') {
     updateField(dt, now); updateCaptions(now);
@@ -711,6 +813,6 @@ function frame() {
 /* the "I'm sorry." particles use the web font, so make sure it's ready */
 if (document.fonts && document.fonts.load) document.fonts.load('italic 500 40px "Cormorant Garamond"').catch(() => {});
 requestAnimationFrame(frame);
-window.__debug = { get state() { return state; }, get scene() { return sceneI; }, skip: () => startScene(sceneI + 1, now) };
+window.__debug = { get thumb() { return [holding, thumbP]; }, get state() { return state; }, get scene() { return sceneI; }, skip: () => startScene(sceneI + 1, now) };
 })();
 </script>
