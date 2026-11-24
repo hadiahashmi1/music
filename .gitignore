@@ -3,3 +3,9 @@ __pycache__/
 .venv/
 venv/
 .idea/workspace.xml
+assets/music/*.mp3
+assets/music/*.m4a
+assets/music/*.ogg
+assets/music/*.wav
+assets/music/*.flac
+For_Gwen.mp4
