@@ -1,0 +1,696 @@
+<title>For Gwen</title>
+<meta name="theme-color" content="#030714">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap">
+<style>
+/* Layout: one full-screen WebGL stage; HTML overlays for the lock UI, captions and controls.
+   Single deliberate look (night blue, silver, gold) on any host theme. */
+:root {
+  --navy-deep: #030714;
+  --navy: #081430;
+  --silver: #cdd6e4;
+  --silver-dim: #8a96aa;
+  --ice: #96c4ff;
+  --gold: #e8bb5c;
+  --gold-bright: #ffde96;
+  --ink: #fff6e4;
+  --display: "Cinzel", "Trajan Pro", Optima, Georgia, serif;
+  --serif: "Cormorant Garamond", Garamond, Baskerville, Georgia, serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  margin: 0; overflow: hidden; background: var(--navy-deep); color: var(--ink);
+  font-family: var(--serif); -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+#stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+.vignette {
+  position: fixed; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,.55) 100%);
+}
+.flash { position: fixed; inset: 0; pointer-events: none; background: #ffdf9a; opacity: 0; mix-blend-mode: screen; }
+.bar { position: fixed; left: 0; right: 0; height: 0; background: #000; transition: height 1.8s cubic-bezier(.65,0,.35,1); pointer-events: none; }
+.bar.top { top: 0; } .bar.bottom { bottom: 0; }
+body.cinema.landscape .bar { height: 7.5vh; }
+
+/* ---------- lock screen */
+#lock {
+  position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 7vh);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  transition: opacity .8s ease; text-align: center;
+}
+#lock.gone { opacity: 0; pointer-events: none; }
+.eyebrow {
+  font-family: var(--display); font-weight: 400; letter-spacing: .32em; text-transform: uppercase;
+  color: var(--silver); font-size: clamp(15px, 2.1vw, 26px); margin: 0; padding-left: .32em;
+}
+.sub { font-style: italic; color: var(--ice); font-size: clamp(19px, 2.4vw, 30px); margin: .35em 0 0; }
+.ornament { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.ornament i { display: block; width: clamp(60px, 9vw, 110px); height: 1px; background: var(--gold); opacity: .8; }
+.ornament b { width: 8px; height: 8px; background: var(--gold); transform: rotate(45deg); }
+#form {
+  position: absolute; left: 0; right: 0; top: 74%;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body.portrait #form { top: 64%; }
+.field { position: relative; width: min(430px, 100%); }
+#pw {
+  width: 100%; box-sizing: border-box; height: 58px; border-radius: 29px;
+  background: rgba(8,18,44,.78); border: 2px solid var(--gold); outline: none;
+  box-shadow: inset 0 0 0 4px rgba(8,18,44,.78), inset 0 0 0 5px rgba(205,214,228,.28), 0 0 28px rgba(232,187,92,.18);
+  color: var(--gold-bright); text-align: center; font-family: var(--serif); font-size: 26px;
+  letter-spacing: .35em; padding: 0 20px; caret-color: var(--gold-bright);
+  -webkit-appearance: none; appearance: none;
+}
+#pw::placeholder { color: var(--silver-dim); font-style: italic; letter-spacing: 0; font-size: 24px; }
+#pw:focus-visible { border-color: var(--gold-bright); box-shadow: inset 0 0 0 4px rgba(8,18,44,.78), inset 0 0 0 5px rgba(205,214,228,.35), 0 0 36px rgba(255,222,150,.32); }
+.shake { animation: shake .6s cubic-bezier(.36,.07,.19,.97); }
+@keyframes shake { 10%,90%{transform:translateX(-2px)} 20%,80%{transform:translateX(5px)} 30%,50%,70%{transform:translateX(-10px)} 40%,60%{transform:translateX(10px)} }
+#unlock {
+  font-family: var(--display); letter-spacing: .4em; text-transform: uppercase; font-size: 13px;
+  color: var(--navy-deep); background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  border: 0; border-radius: 22px; height: 44px; padding: 0 26px 0 calc(26px + .4em); cursor: pointer;
+  box-shadow: 0 6px 24px rgba(232,187,92,.25);
+}
+#unlock:focus-visible { outline: 2px solid var(--ice); outline-offset: 3px; }
+.msg { min-height: 1.4em; font-style: italic; font-size: 21px; color: var(--ice); margin: 0; transition: opacity .6s; }
+.hint { font-style: italic; font-size: 19px; color: var(--gold); margin: 0; opacity: 0; transition: opacity 1s; }
+.hint.on { opacity: .9; }
+.small {
+  font-family: var(--display); letter-spacing: .38em; text-transform: uppercase; font-size: 11px; color: var(--silver-dim);
+}
+
+/* ---------- story */
+#captions {
+  position: fixed; left: 0; right: 0; bottom: 10vh; display: grid; place-items: end center; pointer-events: none;
+  padding-left: max(18px, env(safe-area-inset-left, 0px));
+  padding-right: max(18px, env(safe-area-inset-right, 0px));
+}
+body.portrait #captions { bottom: calc(env(safe-area-inset-bottom, 0px) + 13vh); }
+.cap {
+  grid-area: 1 / 1; text-align: center; width: min(100%, 980px); display: flex; flex-direction: column; align-items: center; gap: .3em;
+  opacity: 0; filter: blur(8px); transform: translateY(14px);
+  transition: opacity 1.6s cubic-bezier(.45,0,.2,1), filter 1.8s cubic-bezier(.45,0,.2,1), transform 2.4s cubic-bezier(.2,.7,.2,1);
+}
+.cap.in { opacity: 1; filter: blur(0); transform: none; }
+.cap.out { opacity: 0; filter: blur(4px); transform: none; transition-duration: 1.2s; }
+.cap span { display: block; text-wrap: balance; text-shadow: 0 2px 14px rgba(0,0,0,.85), 0 0 26px rgba(52,104,214,.55); }
+.lead { font-size: clamp(22px, 3.4vw, 44px); color: var(--ink); font-weight: 500; line-height: 1.15; }
+.italic { font-style: italic; font-size: clamp(19px, 2.7vw, 36px); color: var(--ice); line-height: 1.2; }
+.gold { font-style: italic; font-size: clamp(22px, 2.9vw, 38px); color: var(--gold-bright); text-shadow: 0 2px 14px rgba(0,0,0,.85), 0 0 26px rgba(168,120,44,.7) !important; }
+.hero {
+  font-family: var(--display); font-weight: 500; letter-spacing: .22em; padding-left: .22em; text-transform: uppercase;
+  font-size: clamp(24px, 4.4vw, 58px); color: var(--gold-bright); line-height: 1.2;
+  text-shadow: 0 2px 16px rgba(0,0,0,.85), 0 0 30px rgba(232,187,92,.55) !important;
+}
+#track {
+  position: fixed; left: max(24px, env(safe-area-inset-left, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 9vh);
+  display: flex; align-items: center; gap: 12px; opacity: 0; transition: opacity 2s; pointer-events: none;
+}
+#track i { width: 24px; height: 1px; background: #a8782c; }
+#track.on { opacity: .8; }
+.ctl {
+  position: fixed; top: calc(env(safe-area-inset-top, 0px) + 14px); right: max(14px, env(safe-area-inset-right, 0px));
+  background: rgba(8,18,44,.55); border: 1px solid rgba(205,214,228,.25); border-radius: 18px; height: 36px; padding: 0 14px 0 calc(14px + .38em);
+  color: var(--silver); cursor: pointer; opacity: 0; pointer-events: none; transition: opacity 1.5s;
+}
+.ctl.on { opacity: .75; pointer-events: auto; }
+.ctl:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+#again {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 3vh);
+  background: none; border: 0; padding: 10px 16px 10px calc(16px + .38em); cursor: pointer; opacity: 0; pointer-events: none; transition: opacity 2s;
+}
+#again.on { opacity: .85; pointer-events: auto; }
+#again:focus-visible { outline: 1px solid var(--gold); }
+@media (prefers-reduced-motion: reduce) { .cap { transition-duration: .8s; transform: none; filter: none; } }
+</style>
+
+<canvas id="stage" aria-hidden="true"></canvas>
+<div class="vignette"></div>
+<div class="bar top"></div><div class="bar bottom"></div>
+<div class="flash" id="flash"></div>
+
+<section id="lock" aria-label="Locked message">
+  <h1 class="eyebrow">I owe you something.</h1>
+  <p class="sub">It's locked. The key is a promise.</p>
+  <div class="ornament" aria-hidden="true"><i></i><b></b><i></i></div>
+</section>
+<form id="form" autocomplete="off" novalidate>
+  <p class="msg" id="msg" aria-live="polite"></p>
+  <div class="field" id="field">
+    <label for="pw" class="small" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Password</label>
+    <input id="pw" type="password" inputmode="text" autocapitalize="none" autocorrect="off" spellcheck="false"
+           enterkeyhint="go" placeholder="enter the password" autocomplete="off">
+  </div>
+  <button id="unlock" type="submit">Unlock</button>
+  <p class="hint" id="hint">hint: the promise, in one word, no spaces</p>
+  <p class="small" id="sound">Sound on, please</p>
+</form>
+
+<div id="captions" aria-live="polite"></div>
+<div id="track" class="small"><i></i><span>About You &nbsp;—&nbsp; The 1975</span></div>
+<button class="ctl small" id="mute" type="button">Mute</button>
+<button class="small" id="again" type="button">Watch again</button>
+
+<audio id="song" src="about_you.mp3" preload="auto" playsinline></audio>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+'use strict';
+const NAME = 'Gwen', SIGNATURE = '— with love, Hadia';
+const PW_SHA256 = 'bdce740bd0b257bc5e17e3ef4659240fcdeb09fcbd97ee142fbd87b54e4f99a5'; // the promise, lower-case
+const N = 2300;
+
+/* ================================================================ helpers */
+const TAU = Math.PI * 2;
+const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
+const smooth = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const easeInOut = t => (t = clamp01(t), t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const easeOutBack = (t, s = 2.2) => (t = clamp01(t) - 1, 1 + t * t * ((s + 1) * t + s));
+const lerp = (a, b, t) => a + (b - a) * t;
+let seed = 1975;
+const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+const gauss = () => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v); };
+const pick = arr => arr[(rnd() * arr.length) | 0];
+function m3mul(a, b) { const r = new Array(9); for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) r[i*3+j] = a[i*3]*b[j] + a[i*3+1]*b[3+j] + a[i*3+2]*b[6+j]; return r; }
+const rotX = a => { const c = Math.cos(a), s = Math.sin(a); return [1,0,0, 0,c,-s, 0,s,c]; };
+const rotY = a => { const c = Math.cos(a), s = Math.sin(a); return [c,0,s, 0,1,0, -s,0,c]; };
+const rotZ = a => { const c = Math.cos(a), s = Math.sin(a); return [c,-s,0, s,c,0, 0,0,1]; };
+function axisRot(ax, a) {
+  const l = Math.hypot(ax[0], ax[1], ax[2]), x = ax[0]/l, y = ax[1]/l, z = ax[2]/l, c = Math.cos(a), s = Math.sin(a), t = 1 - c;
+  return [t*x*x+c, t*x*y-s*z, t*x*z+s*y, t*x*y+s*z, t*y*y+c, t*y*z-s*x, t*x*z-s*y, t*y*z+s*x, t*z*z+c];
+}
+function apply(m, P, i, out, j) { const x = P[i], y = P[i+1], z = P[i+2];
+  out[j] = m[0]*x + m[1]*y + m[2]*z; out[j+1] = m[3]*x + m[4]*y + m[5]*z; out[j+2] = m[6]*x + m[7]*y + m[8]*z; }
+
+/* colour slots */
+const GOLD = 0, SILVER = 1, BLUE = 2, ICE = 3, GOLD_HI = 4, WHITE = 5;
+const PAL = [[236*.8,158*.8,38*.8],[205,214,228],[52,104,214],[150,196,255],[250*.85,196*.85,84*.85],[255,246,228]].map(c => c.map(v => v / 255));
+
+/* ================================================================ renderer */
+const canvas = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+const T20 = Math.tan(THREE.MathUtils.degToRad(20));
+let W = 1, H = 1, portrait = false, halfH = 2.6, storyY = .45;
+
+/* background: gradient, drifting light clouds, dither - all in one full-screen shader */
+const bgMat = new THREE.ShaderMaterial({
+  depthTest: false, depthWrite: false, toneMapped: false,
+  uniforms: { uTime: { value: 0 }, uAspect: { value: 1 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.999, 1.0); }',
+  fragmentShader: `
+    varying vec2 vUv; uniform float uTime; uniform float uAspect;
+    float blob(vec2 p, vec2 c, float r){ vec2 d = p - c; d.x *= uAspect; return pow(clamp(1.0 - length(d) / r, 0.0, 1.0), 2.4); }
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+    void main(){
+      vec2 p = vUv;
+      vec3 top = vec3(3.0, 7.0, 20.0) / 255.0, bot = vec3(8.0, 20.0, 48.0) / 255.0;
+      vec3 col = mix(bot, top, p.y);
+      col += vec3(14.0, 34.0, 78.0) / 255.0 * 0.9 * blob(p, vec2(0.5, 0.55), 0.95);
+      float t = uTime;
+      col += vec3(52.0, 104.0, 214.0) / 255.0 * 0.16 * blob(p, vec2(0.5 + 0.32 * sin(t * 0.05), 0.5 + 0.22 * cos(t * 0.04)), 0.75);
+      col += vec3(30.0, 60.0, 150.0) / 255.0 * 0.14 * blob(p, vec2(0.5 + 0.32 * sin(t * 0.05 + 2.1), 0.5 + 0.22 * cos(t * 0.04 + 1.3)), 0.9);
+      col += vec3(168.0, 120.0, 44.0) / 255.0 * 0.07 * blob(p, vec2(0.5 + 0.32 * sin(t * 0.05 + 4.2), 0.5 + 0.22 * cos(t * 0.04 + 2.6)), 0.5);
+      col += (hash(p * 913.0 + t) - 0.5) / 255.0;
+      gl_FragColor = vec4(col, 1.0);
+    }`
+});
+const bg = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), bgMat);
+bg.frustumCulled = false; bg.renderOrder = -10; scene.add(bg);
+
+/* point sprites shared by stars and the particle field */
+function pointMaterial(exposure) {
+  return new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
+    uniforms: { uScale: { value: 1 }, uExposure: { value: exposure }, uTime: { value: 0 } },
+    vertexShader: `
+      attribute vec3 color; attribute float size; attribute float tw;
+      uniform float uScale; uniform float uTime; varying vec3 vColor; varying float vB;
+      void main(){
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * mv;
+        float z = -mv.z;
+        gl_PointSize = max(1.5, size * uScale / z);
+        vColor = color;
+        vB = clamp(1.35 - (z - 4.0) / 6.0, 0.25, 1.0) * (tw > 0.0 ? 0.55 + 0.45 * sin(uTime * 1.3 + tw) : 1.0);
+      }`,
+    fragmentShader: `
+      varying vec3 vColor; varying float vB; uniform float uExposure;
+      void main(){
+        float d = length(gl_PointCoord - 0.5) * 2.0;
+        if (d > 1.0) discard;
+        float core = exp(-d * d * 18.0) * 0.85;
+        float halo = exp(-d * d * 4.5) * 0.3;
+        float hot = clamp(core - 0.5, 0.0, 1.0) * 0.6;
+        gl_FragColor = vec4((vColor * (core + halo) + vec3(hot)) * vB * uExposure, 1.0);
+      }`
+  });
+}
+
+/* starfield */
+const STARS = 520;
+const starGeo = new THREE.BufferGeometry();
+{
+  const p = new Float32Array(STARS * 3), c = new Float32Array(STARS * 3), s = new Float32Array(STARS), tw = new Float32Array(STARS);
+  for (let i = 0; i < STARS; i++) {
+    p[i*3] = (rnd() * 2 - 1) * 16; p[i*3+1] = (rnd() * 2 - 1) * 12; p[i*3+2] = -26 + rnd() * 29;
+    const col = PAL[pick([SILVER, ICE, ICE, BLUE, WHITE, GOLD])]; c.set(col, i * 3);
+    s[i] = 0.12; tw[i] = 0.01 + rnd() * TAU;
+  }
+  starGeo.setAttribute('position', new THREE.BufferAttribute(p, 3));
+  starGeo.setAttribute('color', new THREE.BufferAttribute(c, 3));
+  starGeo.setAttribute('size', new THREE.BufferAttribute(s, 1));
+  starGeo.setAttribute('tw', new THREE.BufferAttribute(tw, 1));
+}
+const starMat = pointMaterial(0.75);
+const stars = new THREE.Points(starGeo, starMat); stars.frustumCulled = false; scene.add(stars);
+
+/* ================================================================ the padlock */
+function envTexture() {
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 512;
+  const g = c.getContext('2d');
+  const grd = g.createLinearGradient(0, 0, 0, 512);
+  grd.addColorStop(0, '#ffffff'); grd.addColorStop(.3, '#d3dbea'); grd.addColorStop(.48, '#8592ad');
+  grd.addColorStop(.62, '#3a4766'); grd.addColorStop(1, '#1a2340');
+  g.fillStyle = grd; g.fillRect(0, 0, 1024, 512);
+  g.fillStyle = 'rgba(255,255,255,.95)'; g.fillRect(0, 150, 1024, 26);          // studio strip light
+  g.fillStyle = 'rgba(255,244,220,.9)'; g.fillRect(180, 60, 140, 200);         // softbox
+  g.fillStyle = 'rgba(120,170,255,.55)'; g.fillRect(700, 90, 120, 220);        // blue fill
+  const t = new THREE.CanvasTexture(c);
+  t.mapping = THREE.EquirectangularReflectionMapping; t.encoding = THREE.sRGBEncoding;
+  return t;
+}
+const pmrem = new THREE.PMREMGenerator(renderer);
+const env = pmrem.fromEquirectangular(envTexture()).texture;
+
+const lock = new THREE.Group(); scene.add(lock);
+const HX = 1.0, HY = 0.78, DEPTH = 0.5, BEV = 0.14, ARCH = 0.62, LEG = 0.55, TUBE = 0.14;
+const goldMat = new THREE.MeshStandardMaterial({ color: 0xd9962a, metalness: 1, roughness: .3, envMap: env, envMapIntensity: 2.0 });
+const silverMat = new THREE.MeshStandardMaterial({ color: 0xeef2f8, metalness: 1, roughness: .18, envMap: env, envMapIntensity: 1.8 });
+const engraveMat = new THREE.MeshStandardMaterial({ color: 0x9a6a22, metalness: 1, roughness: .45, envMap: env, envMapIntensity: .8 });
+const darkMat = new THREE.MeshBasicMaterial({ color: 0x03060f });
+function roundRect(w, h, r) {
+  const s = new THREE.Shape(), x = -w / 2, y = -h / 2;
+  s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r);
+  s.lineTo(x + w, y + h - r); s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r);
+  s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y); return s;
+}
+const bodyGeo = new THREE.ExtrudeGeometry(roundRect(2 * HX - 2 * BEV, 2 * HY - 2 * BEV, .2),
+  { depth: DEPTH, bevelEnabled: true, bevelThickness: BEV, bevelSize: BEV, bevelSegments: 8, curveSegments: 16 });
+bodyGeo.translate(0, 0, -DEPTH / 2);
+const body = new THREE.Mesh(bodyGeo, goldMat); lock.add(body);
+const FRONT = DEPTH / 2 + BEV;
+/* engraved double border */
+for (const [w, h, r, inset] of [[1.74, 1.3, .14, .026], [1.62, 1.18, .1, .014]]) {
+  const ring = roundRect(w, h, r); ring.holes.push(roundRect(w - 2 * inset, h - 2 * inset, r - inset));
+  const m = new THREE.Mesh(new THREE.ShapeGeometry(ring, 12), engraveMat); m.position.z = FRONT + .002; lock.add(m);
+}
+function keyholeShape(s) {
+  const sh = new THREE.Shape(); const r = .12 * s, cy = .05 * s;
+  sh.absarc(0, cy, r, THREE.MathUtils.degToRad(-62), THREE.MathUtils.degToRad(242), false);
+  sh.lineTo(-.065 * s, -.3 * s); sh.lineTo(.065 * s, -.3 * s); sh.closePath(); return sh;
+}
+const rim = new THREE.Mesh(new THREE.ShapeGeometry(keyholeShape(1.42), 24), silverMat); rim.position.set(0, -.08, FRONT + .004); lock.add(rim);
+const hole = new THREE.Mesh(new THREE.ShapeGeometry(keyholeShape(1), 24), darkMat); hole.position.set(0, -.08, FRONT + .006); lock.add(hole);
+/* shackle: a tube along a U, pivoting about its long right leg */
+class UPath extends THREE.Curve {
+  constructor() { super(); this.a = LEG + .02; this.b = Math.PI * ARCH; this.c = LEG + .9; this.L = this.a + this.b + this.c; }
+  getPoint(t, out = new THREE.Vector3()) {
+    let d = t * this.L; const top = HY + LEG;
+    if (d < this.a) return out.set(-ARCH, HY - .02 + d, 0);
+    d -= this.a;
+    if (d < this.b) { const ang = Math.PI - d / ARCH; return out.set(ARCH * Math.cos(ang), top + ARCH * Math.sin(ang), 0); }
+    d -= this.b; return out.set(ARCH, top - d, 0);
+  }
+}
+const shackle = new THREE.Group(); shackle.position.x = ARCH; lock.add(shackle);
+const shGeo = new THREE.TubeGeometry(new UPath(), 160, TUBE, 28, false); shGeo.translate(-ARCH, 0, 0);
+const shMesh = new THREE.Mesh(shGeo, silverMat); shackle.add(shMesh);
+const capGeo = new THREE.CircleGeometry(TUBE, 28); capGeo.rotateX(Math.PI / 2); capGeo.translate(-2 * ARCH, HY - .02, 0);
+shackle.add(new THREE.Mesh(capGeo, silverMat));
+/* lights */
+scene.add(new THREE.AmbientLight(0x23345e, .6));
+const key = new THREE.DirectionalLight(0xfff1d6, 2.6); key.position.set(-2.5, 3, 5); scene.add(key);
+const rimL = new THREE.PointLight(0x4f86ff, 2.2, 14); rimL.position.set(3, -1.5, -2.5); scene.add(rimL);
+/* glows behind the lock */
+function glowSprite(hex) {
+  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+  const grd = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  grd.addColorStop(0, hex); grd.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = grd; g.fillRect(0, 0, 256, 256);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, toneMapped: false }));
+  return s;
+}
+const halo = glowSprite('rgba(52,104,214,.55)'); halo.scale.set(6.5, 6.5, 1); halo.position.z = -1.2; lock.add(halo);
+const goldGlow = glowSprite('rgba(168,120,44,1)'); goldGlow.scale.set(7, 7, 1); goldGlow.position.z = -1; goldGlow.material.opacity = 0; lock.add(goldGlow);
+lock.scale.setScalar(.8);
+
+/* sample points on the lock's surface, in world space, to turn it into particles */
+function samplePoints(mesh, count, out, colOut, cols) {
+  mesh.updateMatrixWorld(true);
+  const g = mesh.geometry, pos = g.attributes.position, idx = g.index;
+  const triCount = idx ? idx.count / 3 : pos.count / 3;
+  const vi = t => idx ? [idx.getX(t*3), idx.getX(t*3+1), idx.getX(t*3+2)] : [t*3, t*3+1, t*3+2];
+  const v = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], ab = new THREE.Vector3(), ac = new THREE.Vector3();
+  const load = t => { const k = vi(t); for (let j = 0; j < 3; j++) v[j].fromBufferAttribute(pos, k[j]); };
+  const areas = new Float32Array(triCount); let total = 0;
+  for (let t = 0; t < triCount; t++) { load(t); ab.subVectors(v[1], v[0]); ac.subVectors(v[2], v[0]); total += ab.cross(ac).length() / 2; areas[t] = total; }
+  const hidden = mesh === shMesh ? HY - .01 - shackle.position.y : -Infinity;   // the part of the leg inside the body
+  const p = new THREE.Vector3();
+  let guard = 0;
+  while (out.length < count + (out._start || 0) && guard++ < count * 20) {
+    const r = rnd() * total; let lo = 0, hi = triCount - 1;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (areas[m] < r) lo = m + 1; else hi = m; }
+    load(lo);
+    let a = rnd(), b = rnd(); if (a + b > 1) { a = 1 - a; b = 1 - b; }
+    p.copy(v[0]).addScaledVector(ab.subVectors(v[1], v[0]), a).addScaledVector(ac.subVectors(v[2], v[0]), b);
+    if (p.y < hidden) continue;
+    p.applyMatrix4(mesh.matrixWorld);
+    out.push([p.x, p.y, p.z]); colOut.push(pick(cols));
+  }
+}
+
+/* ================================================================ formations */
+const HK = .1, HSHIFT = 2.4 * HK + .1;
+let OUTLINE = null;
+function heartOutline(m = 420) {
+  const n = 4000, xs = [], ys = [];
+  for (let i = 0; i < n; i++) { const t = i / (n - 1) * TAU; xs.push(16 * Math.sin(t) ** 3); ys.push(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t)); }
+  const arc = [0]; for (let i = 1; i < n; i++) arc.push(arc[i-1] + Math.hypot(xs[i] - xs[i-1], ys[i] - ys[i-1]));
+  const out = []; let j = 0;
+  for (let k = 0; k < m; k++) { const u = k / m * arc[n-1]; while (arc[j+1] < u) j++; const f = (u - arc[j]) / (arc[j+1] - arc[j] || 1);
+    out.push([lerp(xs[j], xs[j+1], f) * HK, lerp(ys[j], ys[j+1], f) * HK]); }
+  return out;
+}
+function inside(x, y, poly) { let c = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; }
+function heartRaw(n, depth = .62, edgeRatio = .38) {
+  if (!OUTLINE) OUTLINE = heartOutline();
+  const poly = OUTLINE, pts = [], edge = [], ne = Math.floor(n * edgeRatio);
+  for (let i = 0; i < ne; i++) { const q = pick(poly); pts.push([q[0] + gauss() * .018, q[1] + gauss() * .018 + HSHIFT, gauss() * .03]); edge.push(1); }
+  let minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9; for (const [x, y] of poly) { minx = Math.min(minx, x); maxx = Math.max(maxx, x); miny = Math.min(miny, y); maxy = Math.max(maxy, y); }
+  while (pts.length < n) {
+    const x = minx + rnd() * (maxx - minx), y = miny + rnd() * (maxy - miny);
+    if (!inside(x, y, poly)) continue;
+    let d = 1e9; for (let k = 0; k < poly.length; k += 3) d = Math.min(d, Math.hypot(x - poly[k][0], y - poly[k][1]));
+    const dn = clamp01(d / .95), puff = Math.sqrt(dn * (2 - dn));
+    pts.push([x, y + HSHIFT, (rnd() < .5 ? -1 : 1) * depth * puff * (.55 + .45 * rnd())]); edge.push(1 - dn);
+  }
+  return { pts, edge };
+}
+const CY = [5.0, 2.6, .4, -2.6, -5.6, -9.0, -12.5, -17.0].map(v => v * HK + HSHIFT);
+const CX = [0, -.2, .16, -.14, .18, -.1, .08, 0];
+function crackX(y) { for (let i = 0; i < CY.length - 1; i++) if (y <= CY[i] && y >= CY[i+1]) return lerp(CX[i], CX[i+1], (CY[i] - y) / (CY[i] - CY[i+1])); return 0; }
+const shape = (pts, cols, orbit) => ({ pts, cols, orbit: orbit || null });
+
+function sphere(n, r = 1.6) { const pts = [], cols = [];
+  for (let i = 0; i < n; i++) { const k = i + .5, phi = Math.acos(1 - 2 * k / n), th = Math.PI * (1 + Math.sqrt(5)) * k, rr = r * (1 + gauss() * .015);
+    pts.push([Math.cos(th) * Math.sin(phi) * rr, Math.cos(phi) * rr, Math.sin(th) * Math.sin(phi) * rr]); cols.push(pick([SILVER, SILVER, ICE, BLUE, BLUE])); }
+  return shape(pts, cols); }
+function rings(n) { const k = Math.floor(n * .35), core = sphere(k, .65), pts = [], cols = [];
+  core.pts.forEach(p => { const f = Math.pow(rnd(), .25); pts.push([p[0]*f, p[1]*f, p[2]*f]); cols.push(pick([ICE, BLUE, WHITE])); });
+  const tilts = [[.35, 0], [-.5, .9], [.95, -.45]], rest = n - k;
+  tilts.forEach(([tx, tz], j) => { const m = Math.floor(rest / 3) + (j < rest % 3 ? 1 : 0), M = m3mul(rotX(tx), rotZ(tz)), o = [0, 0, 0];
+    for (let i = 0; i < m; i++) { const a = rnd() * TAU, rad = 1.2 + .28 * j + gauss() * .025; apply(M, [Math.cos(a) * rad, gauss() * .02, Math.sin(a) * rad], 0, o, 0); pts.push([...o]); cols.push(pick([SILVER, SILVER, ICE, GOLD])); } });
+  return shape(pts, cols); }
+function dust(n) { const pts = [], cols = [];
+  for (let i = 0; i < n; i++) { let x = gauss(), y = gauss(), z = gauss(); const l = Math.hypot(x, y, z), r = 2 + Math.pow(rnd(), .6) * 4.5;
+    pts.push([x / l * r * 1.4, y / l * r * .8, z / l * r]); cols.push(pick([SILVER, BLUE, BLUE, ICE])); }
+  return shape(pts, cols); }
+function heart(n) { const { pts, edge } = heartRaw(n); return shape(pts, edge.map(e => e > .97 ? pick([SILVER, ICE, ICE]) : pick([BLUE, ICE, BLUE, BLUE]))); }
+function brokenHeart(n, gap) {
+  const { pts, edge } = heartRaw(n), piv = [0, -17 * HK + HSHIFT, 0], out = [], o = [0, 0, 0];
+  for (const p of pts) { const sgn = p[0] < crackX(p[1]) ? -1 : 1, M = m3mul(rotY(sgn * .25 * gap), rotZ(-sgn * .22 * gap));
+    apply(M, [p[0] - piv[0], p[1] - piv[1], p[2] - piv[2]], 0, o, 0);
+    out.push([o[0] + piv[0] + sgn * gap, o[1] + piv[1] - .12 * gap, o[2] + piv[2] - .2 * gap]); }
+  return shape(out, edge.map(e => e > .97 ? pick([SILVER, ICE, ICE]) : pick([BLUE, BLUE, ICE]))); }
+function kintsugi(n, seam = .17) { const m = Math.floor(n * seam), { pts, edge } = heartRaw(n - m), cols = edge.map(e => e > .97 ? pick([SILVER, ICE, SILVER]) : pick([BLUE, ICE, BLUE, BLUE]));
+  for (let i = 0; i < m; i++) { const y = CY[CY.length - 1] + rnd() * (CY[0] - CY[CY.length - 1]);
+    pts.push([crackX(y) + gauss() * .03, y, (rnd() * 2 - 1) * .55 * (.4 + .6 * clamp01((y - CY[CY.length - 1]) / 1.4))]); cols.push(pick([GOLD, GOLD, GOLD_HI, GOLD_HI, WHITE])); }
+  return shape(pts, cols); }
+const HALO_TILT = m3mul(rotX(.42), rotZ(.18)), HALO_C = [0, .15, 0], HALO_AXIS = [HALO_TILT[1], HALO_TILT[4], HALO_TILT[7]];
+function haloHeart(n) { const k = Math.floor(n * .74), h = kintsugi(k), o = [0, 0, 0], orbit = new Array(k).fill(false);
+  for (let i = k; i < n; i++) { const a = rnd() * TAU, rad = 2.75 + gauss() * .05; apply(HALO_TILT, [Math.cos(a) * rad, gauss() * .025, Math.sin(a) * rad], 0, o, 0);
+    h.pts.push([o[0] + HALO_C[0], o[1] + HALO_C[1], o[2] + HALO_C[2]]); h.cols.push(pick([GOLD, SILVER, GOLD_HI, SILVER])); orbit.push(true); }
+  h.orbit = orbit; return h; }
+function textShape(n) {
+  const lines = portrait ? ["I'm", 'sorry.'] : ["I'm sorry."], fs = 190, c = document.createElement('canvas'), g = c.getContext('2d');
+  g.font = `italic 500 ${fs}px "Cormorant Garamond", Georgia, serif`;
+  const w = Math.ceil(Math.max(...lines.map(l => g.measureText(l).width))) + 40, h = Math.ceil(fs * 1.05 * lines.length) + 40;
+  c.width = w; c.height = h; g.font = `italic 500 ${fs}px "Cormorant Garamond", Georgia, serif`;
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  lines.forEach((l, i) => g.fillText(l, w / 2, 20 + fs * 1.05 * (i + .5)));
+  const data = g.getImageData(0, 0, w, h).data, lit = [];
+  for (let y = 0; y < h; y += 1) for (let x = 0; x < w; x += 1) if (data[(y * w + x) * 4 + 3] > 110) lit.push(x, y);
+  const width = portrait ? 3.7 : 6.4, k = width / w, pts = [], cols = [];
+  for (let i = 0; i < n; i++) { const j = ((rnd() * lit.length / 2) | 0) * 2;
+    pts.push([(lit[j] + rnd() - w / 2) * k, -(lit[j+1] + rnd() - h / 2) * k + .15, gauss() * .05]); cols.push(pick([GOLD, GOLD, GOLD_HI])); }
+  return shape(pts, cols); }
+
+/* ================================================================ particle field */
+const F = {
+  pos: new Float32Array(N * 3), vel: new Float32Array(N * 3), base: new Float32Array(N * 3), tgt: new Float32Array(N * 3),
+  col: new Float32Array(N * 3), next: new Float32Array(N * 3), delay: new Float32Array(N), phase: new Float32Array(N * 3),
+  orbit: new Uint8Array(N), tChange: 0, spin: 0, spinAngle: 0, pulse: 0, turb: 0, k: 4, orbitSpeed: 0, orbitAngle: 0,
+};
+for (let i = 0; i < N * 3; i++) F.phase[i] = rnd() * TAU;
+const fGeo = new THREE.BufferGeometry();
+const fPos = new Float32Array(N * 3), fSize = new Float32Array(N).fill(.16), fTw = new Float32Array(N);
+fGeo.setAttribute('position', new THREE.BufferAttribute(fPos, 3).setUsage(THREE.DynamicDrawUsage));
+fGeo.setAttribute('color', new THREE.BufferAttribute(F.col, 3).setUsage(THREE.DynamicDrawUsage));
+fGeo.setAttribute('size', new THREE.BufferAttribute(fSize, 1));
+fGeo.setAttribute('tw', new THREE.BufferAttribute(fTw, 1));
+const fMat = pointMaterial(1);
+const field = new THREE.Points(fGeo, fMat); field.frustumCulled = false; field.visible = false; scene.add(field);
+
+function setShape(s, now, o = {}) {
+  const n = N, oldKey = [], newKey = [];
+  for (let i = 0; i < n; i++) { oldKey.push(i); newKey.push(i); }
+  oldKey.sort((a, b) => (F.pos[a*3+1] + .25 * F.pos[a*3]) - (F.pos[b*3+1] + .25 * F.pos[b*3]));
+  newKey.sort((a, b) => (s.pts[a][1] + .25 * s.pts[a][0]) - (s.pts[b][1] + .25 * s.pts[b][0]));
+  for (let r = 0; r < n; r++) { const i = oldKey[r], j = newKey[r];
+    F.base[i*3] = s.pts[j][0]; F.base[i*3+1] = s.pts[j][1]; F.base[i*3+2] = s.pts[j][2];
+    F.next.set(PAL[s.cols[j]], i * 3); F.orbit[i] = s.orbit && s.orbit[j] ? 1 : 0; }
+  const stagger = o.stagger ?? 1.2;
+  for (let i = 0; i < n; i++) F.delay[i] = rnd() * stagger;
+  F.tChange = now; F.spinAngle = 0;
+  F.spin = o.spin || 0; F.pulse = o.pulse || 0; F.turb = o.turbulence || 0; F.k = o.stiffness || 4;
+}
+const heartbeat = t => { const ph = t % 1.25; return Math.exp(-((ph / .07) ** 2)) + .55 * Math.exp(-(((ph - .26) / .08) ** 2)); };
+function updateField(dt, now) {
+  dt = Math.min(dt, 1 / 30);
+  F.spinAngle += F.spin * dt; F.orbitAngle += F.orbitSpeed * dt;
+  const S = rotY(F.spinAngle), O = axisRot(HALO_AXIS, F.orbitAngle), scale = 1 + F.pulse * heartbeat(now);
+  const k = F.k, c = 2 * Math.sqrt(k) * .72, t = [0, 0, 0], tmp = [0, 0, 0], ct = Math.min(1, dt * 2.2);
+  const { pos, vel, base, col, next, delay, phase, turb } = F;
+  for (let i = 0; i < N; i++) {
+    const j = i * 3;
+    if (F.orbit[i] && F.orbitSpeed) { tmp[0] = base[j] - HALO_C[0]; tmp[1] = base[j+1] - HALO_C[1]; tmp[2] = base[j+2] - HALO_C[2];
+      apply(O, tmp, 0, t, 0); t[0] += HALO_C[0]; t[1] += HALO_C[1]; t[2] += HALO_C[2]; }
+    else { t[0] = base[j]; t[1] = base[j+1]; t[2] = base[j+2]; }
+    if (F.spinAngle) { tmp[0] = t[0]; tmp[1] = t[1]; tmp[2] = t[2]; apply(S, tmp, 0, t, 0); }
+    const active = now - F.tChange >= delay[i];
+    let ax, ay, az;
+    if (active) {
+      ax = k * (t[0] * scale - pos[j]) - c * vel[j]; ay = k * (t[1] * scale - pos[j+1]) - c * vel[j+1]; az = k * (t[2] * scale - pos[j+2]) - c * vel[j+2];
+      col[j] += (next[j] - col[j]) * ct; col[j+1] += (next[j+1] - col[j+1]) * ct; col[j+2] += (next[j+2] - col[j+2]) * ct;
+    } else { ax = -vel[j] * .9; ay = -vel[j+1] * .9; az = -vel[j+2] * .9; }
+    if (turb) { ax += Math.sin(pos[j+1] * 1.3 + now * .7 + phase[j]) * turb; ay += Math.sin(pos[j+2] * 1.1 + now * .9 + phase[j+1]) * turb; az += Math.sin(pos[j] * 1.2 + now * .6 + phase[j+2]) * turb; }
+    vel[j] += ax * dt; vel[j+1] += ay * dt; vel[j+2] += az * dt;
+    pos[j] += vel[j] * dt; pos[j+1] += vel[j+1] * dt; pos[j+2] += vel[j+2] * dt;
+    fPos[j] = pos[j] + Math.sin(now * 1.7 + phase[j]) * .015; fPos[j+1] = pos[j+1] + Math.sin(now * 1.7 + phase[j+1]) * .015; fPos[j+2] = pos[j+2] + Math.sin(now * 1.7 + phase[j+2]) * .015;
+  }
+  fGeo.attributes.position.needsUpdate = true; fGeo.attributes.color.needsUpdate = true;
+}
+
+/* ================================================================ story */
+const SCENES = [
+  { shape: () => sphere(N), dur: 9, spin: .22, stagger: 1.6, sway: .25, caps: [[[["Before anything else —", 'lead'], ["this isn't an excuse. It's an apology.", 'italic']], 1.6, 7]] },
+  { shape: () => rings(N), dur: 9.5, spin: .18, stagger: 1.2, sway: .2, caps: [[[["You asked me not to.", 'lead'], ["You trusted me to listen.", 'italic']], 1.2, 7.8]] },
+  { shape: () => dust(N), dur: 8, spin: .05, stagger: .3, turbulence: 1.6, stiffness: 1.4, sway: .1, caps: [[[["And I did it anyway.", 'lead']], 1, 6.6]] },
+  { shape: () => heart(N), dur: 11, pulse: .035, stagger: 2, sway: .38, caps: [[[["It hurt someone who means the world to you —", 'lead'], ["and in hurting them, I hurt you too.", 'italic']], 2.2, 8.4]] },
+  { shape: () => brokenHeart(N, .5), dur: 10.5, stagger: .35, stiffness: 6, sway: .3, caps: [[[["I can't undo it.", 'lead'], ["And I won't pretend it was small.", 'italic']], 1.4, 8.6]] },
+  { shape: () => brokenHeart(N, portrait ? .8 : 1.15), dur: 11.5, stagger: 1, stiffness: 1.6, turbulence: .12, sway: .32, caps: [[[["I keep going back to the moment you said no,", 'lead'], ["and how that should have been enough.", 'italic']], 1.2, 9.6]] },
+  { shape: () => textShape(N), dur: 10.5, stagger: 1.4, stiffness: 4.5, sway: .16, exposure: .62, caps: [[[["Truly — with no “but” after it.", 'italic']], 3, 7]] },
+  { shape: () => kintsugi(N), dur: 13, stagger: 2.2, stiffness: 3.2, sway: .4, pulse: .02, caps: [[[["In Japan, broken pottery is mended with gold.", 'lead'], ["The cracks aren't hidden — they become part of its story.", 'italic']], 2.4, 10.2]] },
+  { shape: null, dur: 11.5, pulse: .035, sway: .45, caps: [[[["I'm not asking you to forget.", 'lead'], ["Only for the chance to show you — slowly, in what I do.", 'italic']], .6, 10.2]] },
+  { shape: () => haloHeart(N), dur: 10, stagger: 1.5, pulse: .03, sway: .35, orbit: .22, caps: [[[["No games anymore.", 'hero'], ["That's the promise. That's the key.", 'gold']], 1.6, 8]] },
+  { shape: null, dur: null, pulse: .035, sway: .5, orbit: .22, caps: [
+      [[["Take all the time you need.", 'lead'], ["I'll be here — and I'll be better.", 'italic']], 1, 11],
+      [[[`For ${NAME},`, 'italic'], ["I'm sorry.", 'gold'], [SIGNATURE, 'italic']], 12.5, 1e9]] },
+];
+const capBox = document.getElementById('captions');
+let sceneI = -1, sceneT0 = 0, caps = [], sway = 0, swayTarget = 0, exposure = 1, exposureTarget = 1;
+function startScene(i, now) {
+  i = Math.min(i, SCENES.length - 1); const sc = SCENES[i]; sceneI = i; sceneT0 = now;
+  if (sc.shape) setShape(sc.shape(), now, sc);
+  else { F.spin = sc.spin ?? F.spin; F.pulse = sc.pulse ?? F.pulse; F.turb = sc.turbulence || 0; F.k = sc.stiffness ?? F.k; }
+  F.orbitSpeed = sc.orbit || 0; swayTarget = sc.sway ?? .25; exposureTarget = sc.exposure ?? 1;
+  capBox.querySelectorAll('.cap').forEach(el => { el.classList.add('out'); el.classList.remove('in'); setTimeout(() => el.remove(), 1500); });
+  caps = sc.caps.map(([lines, st, dur]) => {
+    const el = document.createElement('div'); el.className = 'cap';
+    lines.forEach(([t, cls]) => { const s = document.createElement('span'); s.className = cls; s.textContent = t; el.appendChild(s); });
+    capBox.appendChild(el); return { el, st, dur, state: 0 };
+  });
+  document.getElementById('again').classList.remove('on');
+}
+function updateCaptions(now) {
+  const lt = now - sceneT0;
+  for (const c of caps) {
+    if (c.state === 0 && lt >= c.st) { c.state = 1; c.el.classList.add('in'); }
+    if (c.state === 1 && lt >= c.st + c.dur - 1.2) { c.state = 2; c.el.classList.add('out'); c.el.classList.remove('in'); }
+  }
+  if (SCENES[sceneI].dur === null && lt > 17) document.getElementById('again').classList.add('on');
+}
+
+/* ================================================================ music (Web Audio so fades work on iPhone) */
+const song = document.getElementById('song');
+let actx = null, gain = null, vol = 0, volTarget = 0, muted = false;
+function startMusic(target) {
+  volTarget = target;
+  try {
+    if (!actx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      actx = new AC(); gain = actx.createGain(); gain.gain.value = 0;
+      actx.createMediaElementSource(song).connect(gain); gain.connect(actx.destination);
+    }
+    if (actx.state === 'suspended') actx.resume();
+  } catch (e) { gain = null; song.volume = 1; }
+  if (song.paused) { const p = song.play(); if (p && p.catch) p.catch(() => {}); }
+}
+song.loop = true;
+function updateMusic(dt) {
+  const goal = muted ? 0 : volTarget; vol += (goal - vol) * Math.min(1, dt * .9);
+  if (gain) gain.gain.value = vol;
+}
+document.getElementById('mute').addEventListener('click', e => { muted = !muted; e.currentTarget.textContent = muted ? 'Sound on' : 'Mute'; startMusic(volTarget); });
+/* music starts softly on the first touch of the lock screen */
+const firstTouch = () => { if (state === 'lock') startMusic(.35); window.removeEventListener('pointerdown', firstTouch); };
+window.addEventListener('pointerdown', firstTouch);
+
+/* ================================================================ lock screen */
+let state = 'lock', unlockT = 0, attempts = 0, now = 0;
+const form = document.getElementById('form'), pw = document.getElementById('pw'), field_ = document.getElementById('field'), msg = document.getElementById('msg');
+async function sha256(s) {
+  if (window.crypto && crypto.subtle) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+  return null;
+}
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  if (state !== 'lock') return;
+  startMusic(.35);                                   // inside the tap: allowed to start sound
+  const guess = pw.value.toLowerCase();
+  const h = await sha256(guess);
+  const ok = h ? h === PW_SHA256 : guess === ['no', 'games', 'anymore'].join('');
+  if (ok) {
+    state = 'unlocking'; unlockT = now; pw.blur();
+    document.getElementById('lock').classList.add('gone'); form.style.transition = 'opacity .8s'; form.style.opacity = 0; form.style.pointerEvents = 'none';
+  } else {
+    attempts++; pw.value = ''; msg.textContent = 'Not quite. Take your time.'; msg.style.opacity = 1;
+    field_.classList.remove('shake'); void field_.offsetWidth; field_.classList.add('shake');
+    clearTimeout(form._t); form._t = setTimeout(() => { msg.style.opacity = 0; }, 2600);
+    if (attempts >= 2) document.getElementById('hint').classList.add('on');
+  }
+});
+
+function beginStory() {
+  /* the lock becomes particles exactly where it stood */
+  lock.updateMatrixWorld(true);
+  const pts = [], cols = [];
+  samplePoints(body, Math.floor(N * .72), pts, cols, [GOLD, GOLD, GOLD, GOLD_HI]);
+  pts._start = pts.length;
+  samplePoints(shMesh, N - pts.length, pts, cols, [SILVER, SILVER, ICE]);
+  while (pts.length < N) { pts.push(pts[(rnd() * pts.length) | 0]); cols.push(GOLD); }
+  field.position.y = storyY; field.rotation.set(0, 0, 0); field.updateMatrixWorld(true);
+  const inv = field.matrixWorld.clone().invert(), v = new THREE.Vector3();
+  for (let i = 0; i < N; i++) { v.set(...pts[i]).applyMatrix4(inv); F.pos.set([v.x, v.y, v.z], i * 3); F.col.set(PAL[cols[i]], i * 3); }
+  let cx = 0, cy = 0, cz = 0; for (let i = 0; i < N; i++) { cx += F.pos[i*3]; cy += F.pos[i*3+1]; cz += F.pos[i*3+2]; } cx /= N; cy /= N; cz /= N;
+  for (let i = 0; i < N; i++) { const j = i * 3; let dx = F.pos[j] - cx, dy = F.pos[j+1] - cy, dz = F.pos[j+2] - cz; const l = Math.hypot(dx, dy, dz) || 1, s = 3.4 * (.4 + rnd());
+    F.vel[j] = dx / l * s + gauss() * .7; F.vel[j+1] = dy / l * s + gauss() * .7; F.vel[j+2] = dz / l * s + gauss() * .7; }
+  lock.visible = false; field.visible = true; state = 'story';
+  const fl = document.getElementById('flash'); fl.style.transition = 'none'; fl.style.opacity = .08; void fl.offsetWidth; fl.style.transition = 'opacity 1.4s ease-out'; fl.style.opacity = 0;
+  document.body.classList.add('cinema'); volTarget = .9;
+  startScene(0, now); F.tChange = now + .6;
+  document.getElementById('mute').classList.add('on');
+  const tr = document.getElementById('track'); setTimeout(() => tr.classList.add('on'), 3000); setTimeout(() => tr.classList.remove('on'), 12500);
+}
+document.getElementById('again').addEventListener('click', () => {
+  setShape(sphere(N), now, { stagger: .8, spin: .2 });
+  for (let i = 0; i < N * 3; i++) F.vel[i] += gauss() * 1.6;
+  startScene(0, now); startMusic(.9);
+});
+
+/* ================================================================ frame */
+function resize() {
+  W = window.innerWidth; H = window.innerHeight; const aspect = W / H; portrait = aspect < 1;
+  document.body.classList.toggle('portrait', portrait); document.body.classList.toggle('landscape', !portrait);
+  renderer.setSize(W, H, false); camera.aspect = aspect;
+  const dist = Math.max(2.75 / T20, 3.15 / (T20 * aspect));
+  camera.position.set(0, 0, dist); camera.updateProjectionMatrix();
+  halfH = dist * T20;
+  storyY = portrait ? halfH * .2 : .45;
+  bgMat.uniforms.uAspect.value = aspect;
+  const scale = renderer.getDrawingBufferSize(new THREE.Vector2()).y / (2 * T20);
+  fMat.uniforms.uScale.value = scale; starMat.uniforms.uScale.value = scale;
+}
+window.addEventListener('resize', resize); resize();
+
+const clock = new THREE.Clock();
+function frame() {
+  const dt = Math.min(clock.getDelta(), 1 / 20); now += dt;
+  bgMat.uniforms.uTime.value = now; starMat.uniforms.uTime.value = now; fMat.uniforms.uTime.value = now;
+  /* stars drift toward us */
+  const sp = starGeo.attributes.position.array; for (let i = 2; i < sp.length; i += 3) { sp[i] += .35 * dt; if (sp[i] > 3) sp[i] -= 29; }
+  starGeo.attributes.position.needsUpdate = true;
+  stars.rotation.y = .05 * Math.sin(now * .05); stars.rotation.x = .03 * Math.sin(now * .07);
+
+  if (state === 'lock' || state === 'unlocking') {
+    let yaw = .42 * Math.sin(now * .45) + .08, pitch = .22 + .04 * Math.sin(now * .31), bob = .05 * Math.sin(now * 1.1);
+    let lift = 0, swivel = 0, glow = 0, sc = 1;
+    if (state === 'unlocking') {
+      const u = now - unlockT, k = smooth(0, .7, u);
+      yaw = lerp(yaw, .32, k); pitch = lerp(pitch, .22, k); bob = lerp(bob, 0, k);
+      lift = u > .35 ? .5 * easeOutBack((u - .35) / .45) : 0;
+      swivel = u > .9 ? -1.35 * easeInOut((u - .9) / .7) : 0;
+      glow = smooth(1.2, 2.3, u); sc = 1 + .06 * smooth(1.4, 2.3, u);
+      if (u >= 2.35) beginStory();
+    }
+    const lockY = portrait ? halfH * .14 : -.4;
+    lock.position.set(0, lockY + bob, 0); lock.rotation.set(pitch, yaw, 0, 'YXZ');
+    lock.scale.setScalar((portrait ? .95 : .8) * sc);
+    shackle.position.y = lift; shackle.rotation.y = swivel;
+    goldMat.emissive.setRGB(.35 * glow, .24 * glow, .08 * glow); goldGlow.material.opacity = glow * .55;
+  }
+  if (state === 'story') {
+    const sc = SCENES[sceneI];
+    if (sc.dur !== null && now - sceneT0 >= sc.dur) startScene(sceneI + 1, now);
+    updateField(dt, now); updateCaptions(now);
+    sway = lerp(sway, swayTarget, Math.min(1, dt * .5)); exposure = lerp(exposure, exposureTarget, Math.min(1, dt * .8));
+    fMat.uniforms.uExposure.value = exposure;
+    field.rotation.set(.07 * Math.sin(now * .17), sway * Math.sin(now * .23), 0);
+    field.position.y = lerp(field.position.y, storyY, Math.min(1, dt * 2));
+  }
+  updateMusic(dt);
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+/* the "I'm sorry." particles use the web font, so make sure it's ready */
+if (document.fonts && document.fonts.load) document.fonts.load('italic 500 40px "Cormorant Garamond"').catch(() => {});
+requestAnimationFrame(frame);
+window.__debug = { get state() { return state; }, get scene() { return sceneI; }, skip: () => startScene(sceneI + 1, now) };
+})();
+</script>
