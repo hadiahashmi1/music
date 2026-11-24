@@ -25,10 +25,10 @@ LOCK_SUBTITLE = "It's locked. The key is a promise."
 LOCK_HINT = "the promise, in one word, no spaces"   # set to "" to hide the hint
 SHOW_HINT_AFTER_ATTEMPTS = 2                      # hint fades in after N wrong tries
 
-# Optional: their name. Leave empty to keep it anonymous.
-FRIEND_NAME = ""
+# Their name, shown on the final scene. Leave empty to keep it anonymous.
+FRIEND_NAME = "Gwen"
 # How you sign the last frame. Leave empty to show nothing.
-SIGNATURE = ""
+SIGNATURE = "— with love, Hadia"
 
 # --------------------------------------------------------------------------
 #  Music

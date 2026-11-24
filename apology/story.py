@@ -88,8 +88,8 @@ def finale_captions():
         lines.append(("I'm sorry.", "gold"))
         if C.SIGNATURE:
             lines.append((C.SIGNATURE, "italic"))
-        caps.append((lines, t, 1e9))
+        caps.append((lines, t, 1e9, 0.795))
     else:
         caps.append(([("I'm sorry.", "gold")], t, 1e9))
-    caps.append(([("R  —  WATCH AGAIN", "small")], t + 4.0, 1e9))
+    caps.append(([("R  —  WATCH AGAIN", "small")], t + 4.0, 1e9, 0.962))
     return caps
